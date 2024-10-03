@@ -11,7 +11,7 @@ class EventDataProcessor:
     defines regions of interest (ROI), and visualizes the events with attention zones.
     """
 
-    def __init__(self, event_file, image_file, calib_file, images_folder_path,k=3):
+    def __init__(self, event_file, image_file, calib_file, images_folder_path, k=3):
         """
         Initializes the EventDataProcessor with event data, images, and calibration.
 
@@ -19,7 +19,8 @@ class EventDataProcessor:
             event_file (str): Path to the event data file.
             image_file (str): Path to the image data file.
             calib_file (str): Path to the calibration data file.
-            images_folder_path (str): Path to the frames folder
+            images_folder_path (str): Path to the frames folder.
+            k (int): parameter for k-means clustering
         """
         self.events = self.load_events(event_file)
         self.images = self.load_images(image_file)
