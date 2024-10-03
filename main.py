@@ -89,7 +89,7 @@ class EventDataProcessor:
         Allows the user to define a region of interest (ROI) on a blank image.
         The ROI is set in the attention system.
         """
-        img = np.zeros((self.calib['width'],self.calib['height'], 3), dtype=np.uint8)
+        img = np.zeros((self.calib['width'], self.calib['height'], 3), dtype=np.uint8)
         roi = cv2.selectROI("Define ROI", img)
         cv2.destroyWindow("Define ROI")
         self.roi = roi
@@ -136,6 +136,7 @@ class EventDataProcessor:
         if self.roi:
             x, y, w, h = self.roi
             cv2.rectangle(img, (x, y), (x + w, y + h), (255, 255, 0), 2)
+
 
         cv2.imshow('Events and Attention', img)
         cv2.waitKey(1)
@@ -255,22 +256,23 @@ def main():
     This function loads the necessary data, allows the user to select the attention mode,
     processes events in a sliding window, and visualizes the events and attention zones.
     """
+
     processor = EventDataProcessor('events.txt', 'images.txt', 'calib.txt', 'images')
 
-    # Ask user to choose attention mode
-    attention_mode = input("Choose attention mode (size/roi/memory): ").lower()
+
+    attention_mode = ''
     while attention_mode not in ['size', 'roi', 'memory']:
-        attention_mode = input("Invalid choice. Choose attention mode (size/roi/memory): ").lower()
+        attention_mode = input("Choose attention mode (size/roi/memory): ").lower()
 
     if attention_mode == 'roi':
         # Ask user to define ROI
         processor.define_roi()
 
-    window_size = 0.05  # 50ms window
+    window_size = 0.03  # 50ms window
     start_time = processor.events[0][0]
     end_time = processor.events[-1][0]
     current_time = start_time
-    while current_time < end_time:
+    while current_time <= end_time:
         window_end = current_time + window_size
         result = processor.process_events_in_window(current_time, window_end, attention_mode)
 
