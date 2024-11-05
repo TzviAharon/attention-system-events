@@ -96,7 +96,7 @@ class EventDataProcessor:
         self.roi = roi
         self.attention_system.set_roi(roi)
 
-    def process_events_in_window(self, start_time, end_time, attention_mode):
+    def process_events_in_window(self, start_time, end_time, attention_mode, activate_tolerance_mechanism=False):
         """
         Processes events within a specified time window.
 
@@ -113,7 +113,7 @@ class EventDataProcessor:
             return None
 
         event_array = np.array([(e[1], e[2]) for e in window_events])
-        attention_zone = self.attention_system.process_events(event_array, attention_mode)
+        attention_zone = self.attention_system.process_events(event_array, attention_mode, activate_tolerance_mechanism)
         return window_events, attention_zone
 
     def visualize_events_and_attention(self, attention_zone, image_file):
@@ -156,11 +156,15 @@ class AdaptiveAttention:
         Args:
             image_size (tuple): Size of the image (width, height).
             n_clusters (int): Number of clusters for K-Means.
+            previous_attention (np.array): coordinated of last center of attention
+            roi Sequence[int]: Coordinates of the ROI (x, y, width, height).
+
         """
         self.image_size = image_size
         self.n_clusters = n_clusters
         self.previous_attention = None
         self.roi = None
+
 
     def set_roi(self, roi):
         """
@@ -171,13 +175,29 @@ class AdaptiveAttention:
         """
         self.roi = roi
 
-    def process_events(self, events, attention_mode):
+    def tolerance_scaling(self, weights, positions):
+        """
+        Scale the weights when tolerance scaling is active.
+        Farther position will have larger scales
+
+        Args:
+            weights (np.array): weights of centroids
+            positions (np.array): positions of centroids
+        """
+        factor = 3
+        distances = np.linalg.norm(positions - self.previous_attention, axis=1)
+        weights = weights*distances/factor
+        return weights
+
+
+    def process_events(self, events, attention_mode, tolerance_mechanism=False):
         """
         Processes a list of events and determines the attention zone.
 
         Args:
             events (np.array): Array of event coordinates (x, y).
             attention_mode (str): Mode of attention ('size', 'roi', 'memory').
+            tolerance_mechanism (bool): True for activating the mechanism, default is False.
 
         Returns:
             np.array: Coordinates of the attention zone or None if not enough events are present.
@@ -205,6 +225,10 @@ class AdaptiveAttention:
                 weights = self.memory_weighting(centroids)
         else:
             weights = cluster_sizes
+
+        if tolerance_mechanism and self.previous_attention is not None:
+            weights = self.tolerance_scaling(weights, centroids)
+
 
         # Select the cluster with the highest weight as the attention zone
         attention_index = np.argmax(weights)
@@ -263,7 +287,17 @@ def main():
 
     attention_mode = ''
     while attention_mode not in ['size', 'roi', 'memory']:
-        attention_mode = input("Choose attention mode (size/roi/memory): ").lower()
+        attention_mode = input("Choose attention mode (size/roi/memory): ").lower().strip()
+
+    active_tolerance_mechanism = ''
+    while active_tolerance_mechanism not in ['yes', 'no']:
+        active_tolerance_mechanism = input("Activate tolerance mechanism? [yes/no]: ").lower().strip()
+
+    if active_tolerance_mechanism == 'yes':
+        active_tolerance_mechanism = True
+    else:
+        active_tolerance_mechanism=False
+
 
     if attention_mode == 'roi':
         # Ask user to define ROI
@@ -275,7 +309,7 @@ def main():
     current_time = start_time
     while current_time <= end_time:
         window_end = current_time + window_size
-        result = processor.process_events_in_window(current_time, window_end, attention_mode)
+        result = processor.process_events_in_window(current_time, window_end, attention_mode,active_tolerance_mechanism)
 
         if result:
             window_events, attention_zone = result
