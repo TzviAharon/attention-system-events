@@ -1,8 +1,7 @@
 import numpy as np
-import cv2
 from sklearn.cluster import KMeans
 import os
-
+import cv2
 
 class EventDataProcessor:
     """
@@ -19,7 +18,7 @@ class EventDataProcessor:
             event_file (str): Path to the event data file.
             image_file (str): Path to the image data file.
             calib_file (str): Path to the calibration data file.
-            images_folder_path (str): Path to the frames folder.
+            images_folder_path (str): Path to the frames' folder.
             k (int): parameter for k-means clustering
         """
         self.events = self.load_events(event_file)
@@ -139,6 +138,11 @@ class EventDataProcessor:
             cv2.rectangle(img, (x, y), (x + w, y + h), (255, 255, 0), 2)
 
 
+        # code for saving images for visualization
+        # img_name = image_file.split('/')[1]
+        # out_path = os.path.join(os.getcwd(),'out','memory',img_name)
+        # cv2.imwrite(out_path, img)
+
         cv2.imshow('Events and Attention', img)
         cv2.waitKey(1)
 
@@ -156,7 +160,6 @@ class AdaptiveAttention:
         Args:
             image_size (tuple): Size of the image (width, height).
             n_clusters (int): Number of clusters for K-Means.
-            previous_attention (np.array): coordinated of last center of attention
             roi Sequence[int]: Coordinates of the ROI (x, y, width, height).
 
         """
@@ -222,7 +225,7 @@ class AdaptiveAttention:
             if self.previous_attention is None:
                 weights = cluster_sizes
             else:
-                weights = self.memory_weighting(centroids)
+                weights = self.memory_weighting(centroids, cluster_sizes)
         else:
             weights = cluster_sizes
 
@@ -260,18 +263,22 @@ class AdaptiveAttention:
                 weights[i] = cluster_sizes[i] * 0.05  # Reduced importance for clusters outside ROI
         return weights
 
-    def memory_weighting(self, centroids):
+    def memory_weighting(self, positions, weights):
         """
         Applies memory-based weighting to clusters based on their distance from the previous attention zone.
 
-        Args:
-            centroids (np.array): Centroid coordinates of the clusters.
+        Parameters:
+        - positions (numpy array): Array of positions corresponding to each weight.
+        - weights (numpy array): Array of weights.
 
         Returns:
             np.array: Adjusted weights for each cluster.
         """
-        distances = np.linalg.norm(centroids - self.previous_attention, axis=1)
-        weights = np.exp(-distances / 50)  # Gaussian-like weighting
+        sigma = 100
+        distances = np.linalg.norm(positions - self.previous_attention, axis=1)
+        gaussian_weights = np.exp(-0.5 * (distances / sigma) ** 2)
+        weights = weights * gaussian_weights
+
         return weights
 
 
