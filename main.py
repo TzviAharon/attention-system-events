@@ -103,9 +103,11 @@ class EventDataProcessor:
             start_time (float): Start time of the window.
             end_time (float): End time of the window.
             attention_mode (str): Mode of attention ('size', 'roi', 'memory').
+            activate_tolerance_mechanism (bool): True for activating tolerance mechanism, O.w False.
 
         Returns:
             tuple: A tuple containing the window events and the calculated attention zone, or None if no events are found.
+
         """
         window_events = [e for e in self.events if start_time <= e[0] < end_time]
         if not window_events:
@@ -146,7 +148,6 @@ class EventDataProcessor:
         cv2.imshow('Events and Attention', img)
         cv2.waitKey(1)
 
-
 class AdaptiveAttention:
     """
     Adaptive attention system that processes events and determines areas of interest.
@@ -167,7 +168,6 @@ class AdaptiveAttention:
         self.n_clusters = n_clusters
         self.previous_attention = None
         self.roi = None
-
 
     def set_roi(self, roi):
         """
